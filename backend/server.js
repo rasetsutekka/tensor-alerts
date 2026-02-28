@@ -19,6 +19,9 @@ admin.initializeApp({
 const db = admin.firestore();
 const port = process.env.PORT || 8080;
 
+// Lightweight in-memory cooldown/rate limiter for proactive floor alerts.
+const alertState = new Map(); // key: deviceId:slug -> { lastSentAt, hourStart, hourCount, lastFloor }
+
 app.get('/health', (_, res) => res.json({ ok: true }));
 
 app.post('/register-device', async (req, res) => {
@@ -39,16 +42,75 @@ app.post('/upsert-collection', async (req, res) => {
   res.json({ ok: true });
 });
 
+function passesCadence(deviceId, c, event) {
+  const key = `${deviceId}:${c.slug}`;
+  const now = Date.now();
+  const state = alertState.get(key) ?? {
+    lastSentAt: 0,
+    hourStart: now,
+    hourCount: 0,
+    lastFloor: Number(c.floorPrice || 0),
+  };
+
+  const minIntervalMs = (Number(c.minIntervalMinutes || 30) * 60 * 1000);
+  if (now - state.lastSentAt < minIntervalMs) return false;
+
+  if (now - state.hourStart > 60 * 60 * 1000) {
+    state.hourStart = now;
+    state.hourCount = 0;
+  }
+  if (state.hourCount >= Number(c.maxAlertsPerHour || 4)) return false;
+
+  if (event.type === 'floor') {
+    const previous = Number(state.lastFloor || 0);
+    const current = Number(event.floorPriceSol || 0);
+    const absSol = Math.abs(current - previous);
+    const pct = previous > 0 ? (absSol / previous) * 100 : 0;
+
+    const minPct = Number(c.floorMovePercentThreshold || 2);
+    const minSol = Number(c.floorMoveSolThreshold || 0.2);
+    if (pct < minPct && absSol < minSol) return false;
+  }
+
+  state.lastSentAt = now;
+  state.hourCount += 1;
+  if (event.type === 'floor') state.lastFloor = Number(event.floorPriceSol || state.lastFloor);
+  alertState.set(key, state);
+  return true;
+}
+
 function matchesFilter(event, c) {
   if (!c.enabled) return false;
   if (event.type === 'sale' && !c.salesAlerts) return false;
   if (event.type === 'bid' && !c.bidAlerts) return false;
-  if (event.type === 'floor_drop' && !c.floorDropAlerts) return false;
+  if (event.type === 'floor' && !c.floorDropAlerts) return false;
+
   if (event.type === 'sale' && Number(event.priceSol || 0) < Number(c.minSalePrice || 0)) return false;
-  if (event.type === 'floor_drop' && Number(event.dropPct || 0) < Number(c.floorDropThreshold || 0)) return false;
+  if (event.type === 'floor' && Number(event.dropPct || 0) < Number(c.floorDropThreshold || 0)) return false;
+
   const trait = String(c.traitContains || '').toLowerCase();
   if (trait && !String(event.traitsText || '').toLowerCase().includes(trait)) return false;
   return true;
+}
+
+function buildNotification(event) {
+  if (event.type === 'floor') {
+    const direction = Number(event.deltaPct || 0) >= 0 ? '+' : '';
+    return {
+      title: `Tensor Alert • ${event.collectionName || event.collectionSlug}`,
+      body: `Floor moved ${direction}${Number(event.deltaPct || 0).toFixed(2)}% (${Number(event.deltaSol || 0).toFixed(2)} SOL)`
+    };
+  }
+  if (event.type === 'sale') {
+    return {
+      title: `New sale on ${event.collectionName || event.collectionSlug}!`,
+      body: `${event.priceSol ?? '--'} SOL • ${event.nftName ?? 'NFT'}`,
+    };
+  }
+  return {
+    title: `New bid on ${event.collectionName || event.collectionSlug}!`,
+    body: `${event.priceSol ?? '--'} SOL • ${event.nftName ?? 'NFT'}`,
+  };
 }
 
 async function fanoutNotification(event) {
@@ -59,17 +121,18 @@ async function fanoutNotification(event) {
     if (!user.fcmToken) continue;
 
     const collectionsSnap = await userDoc.ref.collection('collections').get();
-    const hit = collectionsSnap.docs
+    const matching = collectionsSnap.docs
       .map(d => d.data())
-      .find(c => c.slug === event.collectionSlug && matchesFilter(event, c));
+      .find(c => c.slug === event.collectionSlug && matchesFilter(event, c) && passesCadence(userDoc.id, c, event));
 
-    if (!hit) continue;
+    if (!matching) continue;
 
+    const payload = buildNotification(event);
     await admin.messaging().send({
       token: user.fcmToken,
       notification: {
-        title: `New ${event.type} on ${event.collectionName || event.collectionSlug}!`,
-        body: `${event.priceSol ?? '--'} SOL • ${event.nftName ?? 'NFT'}`,
+        title: payload.title,
+        body: payload.body,
         imageUrl: event.imageUrl || undefined,
       },
       android: {
@@ -80,7 +143,7 @@ async function fanoutNotification(event) {
         },
       },
       data: {
-        deeplink: `https://tensor.trade/item/${event.mint}`,
+        deeplink: event.mint ? `https://tensor.trade/item/${event.mint}` : `https://tensor.trade/trade/${event.collectionSlug}`,
       },
     });
   }
@@ -100,14 +163,17 @@ function connectTensor() {
     try {
       const msg = JSON.parse(raw.toString());
       const event = {
-        type: msg.type,
+        type: msg.type, // sale | bid | floor
         collectionSlug: msg.collectionSlug,
         collectionName: msg.collectionName,
         priceSol: msg.priceSol,
+        floorPriceSol: msg.floorPriceSol,
+        deltaSol: msg.deltaSol,
+        deltaPct: msg.deltaPct,
+        dropPct: msg.dropPct,
         nftName: msg.nftName,
         imageUrl: msg.imageUrl,
         mint: msg.mint,
-        dropPct: msg.dropPct,
         traitsText: msg.traitsText,
       };
       await fanoutNotification(event);

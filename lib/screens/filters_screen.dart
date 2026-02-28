@@ -17,7 +17,14 @@ class _FiltersScreenState extends State<FiltersScreen> {
   late bool floorDrops;
   late double minSale;
   late double dropThreshold;
+  late double floorMovePct;
+  late double floorMoveSol;
+  late int minIntervalMins;
+  late int maxAlertsHour;
   late TextEditingController traitController;
+
+  static const _intervalOptions = [15, 30, 45, 60, 120, 180];
+  static const _maxPerHourOptions = [2, 4, 6];
 
   @override
   void initState() {
@@ -28,6 +35,10 @@ class _FiltersScreenState extends State<FiltersScreen> {
     floorDrops = widget.collection.floorDropAlerts;
     minSale = widget.collection.minSalePrice;
     dropThreshold = widget.collection.floorDropThreshold;
+    floorMovePct = widget.collection.floorMovePercentThreshold;
+    floorMoveSol = widget.collection.floorMoveSolThreshold;
+    minIntervalMins = widget.collection.minIntervalMinutes;
+    maxAlertsHour = widget.collection.maxAlertsPerHour;
     traitController = TextEditingController(text: widget.collection.traitContains);
   }
 
@@ -53,6 +64,27 @@ class _FiltersScreenState extends State<FiltersScreen> {
           Slider(value: minSale, min: 0, max: 100, divisions: 100, activeColor: const Color(0xFF00F0FF), onChanged: (v) => setState(() => minSale = v)),
           Text('Floor drop threshold: ${dropThreshold.toStringAsFixed(0)}%', style: const TextStyle(fontWeight: FontWeight.w700)),
           Slider(value: dropThreshold, min: 0, max: 100, divisions: 100, activeColor: const Color(0xFF8A2BE2), onChanged: (v) => setState(() => dropThreshold = v)),
+          const SizedBox(height: 10),
+          Text('Floor move trigger: ${floorMovePct.toStringAsFixed(1)}%', style: const TextStyle(fontWeight: FontWeight.w700)),
+          Slider(value: floorMovePct, min: 0, max: 20, divisions: 80, activeColor: const Color(0xFF00FF9F), onChanged: (v) => setState(() => floorMovePct = v)),
+          Text('Floor move trigger: ${floorMoveSol.toStringAsFixed(2)} SOL', style: const TextStyle(fontWeight: FontWeight.w700)),
+          Slider(value: floorMoveSol, min: 0, max: 10, divisions: 100, activeColor: const Color(0xFF00F0FF), onChanged: (v) => setState(() => floorMoveSol = v)),
+          const SizedBox(height: 12),
+          _dropdownCard<int>(
+            label: 'Minimum interval between alerts',
+            value: minIntervalMins,
+            items: _intervalOptions,
+            text: (v) => '$v min',
+            onChanged: (v) => setState(() => minIntervalMins = v),
+          ),
+          const SizedBox(height: 10),
+          _dropdownCard<int>(
+            label: 'Max alerts per hour',
+            value: maxAlertsHour,
+            items: _maxPerHourOptions,
+            text: (v) => '$v / hr',
+            onChanged: (v) => setState(() => maxAlertsHour = v),
+          ),
           const SizedBox(height: 12),
           TextField(
             controller: traitController,
@@ -75,6 +107,10 @@ class _FiltersScreenState extends State<FiltersScreen> {
                 floorDropAlerts: floorDrops,
                 minSalePrice: minSale,
                 floorDropThreshold: dropThreshold,
+                floorMovePercentThreshold: floorMovePct,
+                floorMoveSolThreshold: floorMoveSol,
+                minIntervalMinutes: minIntervalMins,
+                maxAlertsPerHour: maxAlertsHour,
                 traitContains: traitController.text.trim(),
               ),
             ),
@@ -94,4 +130,32 @@ class _FiltersScreenState extends State<FiltersScreen> {
           title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
         ),
       );
+
+  Widget _dropdownCard<T>({
+    required String label,
+    required T value,
+    required List<T> items,
+    required String Function(T) text,
+    required ValueChanged<T> onChanged,
+  }) {
+    return Card(
+      color: const Color(0xFF121212),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        child: Row(
+          children: [
+            Expanded(child: Text(label, style: const TextStyle(fontWeight: FontWeight.w700))),
+            DropdownButton<T>(
+              value: value,
+              underline: const SizedBox.shrink(),
+              items: items.map((e) => DropdownMenuItem<T>(value: e, child: Text(text(e)))).toList(),
+              onChanged: (v) {
+                if (v != null) onChanged(v);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

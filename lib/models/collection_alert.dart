@@ -10,6 +10,12 @@ class CollectionAlert {
   final double floorDropThreshold;
   final String traitContains;
 
+  // Notification-first cadence/rate controls
+  final double floorMovePercentThreshold;
+  final double floorMoveSolThreshold;
+  final int minIntervalMinutes;
+  final int maxAlertsPerHour;
+
   const CollectionAlert({
     required this.slug,
     this.displayName,
@@ -21,6 +27,10 @@ class CollectionAlert {
     this.minSalePrice = 0,
     this.floorDropThreshold = 5,
     this.traitContains = '',
+    this.floorMovePercentThreshold = 2,
+    this.floorMoveSolThreshold = 0.2,
+    this.minIntervalMinutes = 30,
+    this.maxAlertsPerHour = 4,
   });
 
   Map<String, dynamic> toMap() => {
@@ -34,6 +44,10 @@ class CollectionAlert {
         'minSalePrice': minSalePrice,
         'floorDropThreshold': floorDropThreshold,
         'traitContains': traitContains,
+        'floorMovePercentThreshold': floorMovePercentThreshold,
+        'floorMoveSolThreshold': floorMoveSolThreshold,
+        'minIntervalMinutes': minIntervalMinutes,
+        'maxAlertsPerHour': maxAlertsPerHour,
       };
 
   factory CollectionAlert.fromMap(Map<String, dynamic> map) => CollectionAlert(
@@ -47,6 +61,10 @@ class CollectionAlert {
         minSalePrice: (map['minSalePrice'] ?? 0).toDouble(),
         floorDropThreshold: (map['floorDropThreshold'] ?? 5).toDouble(),
         traitContains: map['traitContains'] ?? '',
+        floorMovePercentThreshold: (map['floorMovePercentThreshold'] ?? 2).toDouble(),
+        floorMoveSolThreshold: (map['floorMoveSolThreshold'] ?? 0.2).toDouble(),
+        minIntervalMinutes: (map['minIntervalMinutes'] ?? 30).toInt(),
+        maxAlertsPerHour: (map['maxAlertsPerHour'] ?? 4).toInt(),
       );
 
   CollectionAlert copyWith({
@@ -58,6 +76,10 @@ class CollectionAlert {
     double? minSalePrice,
     double? floorDropThreshold,
     String? traitContains,
+    double? floorMovePercentThreshold,
+    double? floorMoveSolThreshold,
+    int? minIntervalMinutes,
+    int? maxAlertsPerHour,
   }) {
     return CollectionAlert(
       slug: slug,
@@ -70,6 +92,10 @@ class CollectionAlert {
       minSalePrice: minSalePrice ?? this.minSalePrice,
       floorDropThreshold: floorDropThreshold ?? this.floorDropThreshold,
       traitContains: traitContains ?? this.traitContains,
+      floorMovePercentThreshold: floorMovePercentThreshold ?? this.floorMovePercentThreshold,
+      floorMoveSolThreshold: floorMoveSolThreshold ?? this.floorMoveSolThreshold,
+      minIntervalMinutes: minIntervalMinutes ?? this.minIntervalMinutes,
+      maxAlertsPerHour: maxAlertsPerHour ?? this.maxAlertsPerHour,
     );
   }
 }
