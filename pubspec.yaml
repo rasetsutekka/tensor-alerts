@@ -1,0 +1,24 @@
+name: tensor_alerts
+description: Minimalist Tensor NFT alerts app for Solana Mobile
+environment:
+  sdk: ">=3.5.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  google_fonts: ^6.2.1
+  firebase_core: ^3.13.0
+  cloud_firestore: ^5.6.6
+  firebase_messaging: ^15.2.5
+  flutter_secure_storage: ^9.2.2
+  http: ^1.3.0
+  web_socket_channel: ^3.0.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
