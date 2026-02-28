@@ -1,29 +1,19 @@
 import 'package:flutter/material.dart';
 
-void main() {
-WidgetsFlutterBinding.ensureInitialized();
-runApp(const TensorAlertsSafeApp());
-}
+void main() => runApp(const App());
 
-class TensorAlertsSafeApp extends StatelessWidget {
-const TensorAlertsSafeApp({super.key});
-
+class App extends StatelessWidget {
+const App({super.key});
 @override
 Widget build(BuildContext context) {
-return MaterialApp(
+return const MaterialApp(
 debugShowCheckedModeBanner: false,
-title: 'Tensor Alerts',
-theme: ThemeData.dark(),
-home: const Scaffold(
+home: Scaffold(
 backgroundColor: Color(0xFF0A0A0A),
 body: Center(
 child: Text(
-'Tensor Alerts Safe Mode',
-style: TextStyle(
-color: Colors.white,
-fontSize: 24,
-fontWeight: FontWeight.bold,
-),
+'Tensor Alerts boots ✅',
+style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
 ),
 ),
 ),
