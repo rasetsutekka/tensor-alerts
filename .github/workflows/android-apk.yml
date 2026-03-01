@@ -99,13 +99,7 @@ jobs:
           disable-animations: true
           script: |
             adb install -r artifacts/app-debug.apk
-            ACTIVITY=$(adb shell cmd package resolve-activity --brief ai.tensor.alerts | tail -n 1 | tr -d '\r')
-            if [ -z "$ACTIVITY" ] || [ "$ACTIVITY" = "No activity found" ]; then
-              echo "Could not resolve launcher activity for ai.tensor.alerts"
-              adb shell dumpsys package ai.tensor.alerts | sed -n '1,200p'
-              adb logcat -d > emulator-logcat.txt
-              exit 1
-            fi
+            ACTIVITY=$(adb shell cmd package resolve-activity --brief ai.tensor.alerts | tail -n 1 | tr -d '\r'); [ -n "$ACTIVITY" ] && [ "$ACTIVITY" != "No activity found" ] || { echo "Could not resolve launcher activity for ai.tensor.alerts"; adb shell dumpsys package ai.tensor.alerts | sed -n '1,200p'; adb logcat -d > emulator-logcat.txt; exit 1; }
             echo "Launching: $ACTIVITY"
             adb shell am start -n "$ACTIVITY"
             sleep 12
