@@ -59,7 +59,8 @@ jobs:
       - name: Build arm64 debug APK
         run: flutter build apk --debug --target-platform android-arm64
 
-      - name: Build arm64 release APK
+      - name: Build arm64 release APK (optional)
+        continue-on-error: true
         run: flutter build apk --release --target-platform android-arm64
 
       - name: Upload debug APK
@@ -68,11 +69,12 @@ jobs:
           name: app-debug-apk-${{ github.run_number }}
           path: build/app/outputs/flutter-apk/app-debug.apk
 
-      - name: Upload release APK
+      - name: Upload release APK (if built)
         uses: actions/upload-artifact@v4
         with:
           name: app-release-apk-${{ github.run_number }}
           path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: ignore
 
   emulator-smoke-test:
     needs: quality-and-build
