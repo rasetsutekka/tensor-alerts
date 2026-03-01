@@ -3,6 +3,8 @@ import express from 'express';
 import cors from 'cors';
 import admin from 'firebase-admin';
 import WebSocket from 'ws';
+import { PublicKey } from '@solana/web3.js';
+import { SolanaAgentKit } from 'solana-agent-kit';
 
 const app = express();
 app.use(cors());
@@ -19,10 +21,49 @@ admin.initializeApp({
 const db = admin.firestore();
 const port = process.env.PORT || 8080;
 
+const solanaRpcUrl = process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com';
+const solanaPrivateKey = process.env.SOLANA_PRIVATE_KEY;
+const solanaAgent = solanaPrivateKey ? new SolanaAgentKit(solanaPrivateKey, solanaRpcUrl) : null;
+
 // Lightweight in-memory cooldown/rate limiter for proactive floor alerts.
 const alertState = new Map(); // key: deviceId:slug -> { lastSentAt, hourStart, hourCount, lastFloor }
 
 app.get('/health', (_, res) => res.json({ ok: true }));
+
+app.get('/solana/status', (_, res) => {
+  if (!solanaAgent) {
+    return res.status(503).json({
+      ok: false,
+      error: 'solana-agent-kit is not configured',
+      requiredEnv: ['SOLANA_PRIVATE_KEY', 'SOLANA_RPC_URL(optional)']
+    });
+  }
+
+  return res.json({
+    ok: true,
+    rpcUrl: solanaRpcUrl,
+    wallet: solanaAgent.wallet_address.toBase58(),
+  });
+});
+
+app.get('/solana/balance', async (req, res) => {
+  if (!solanaAgent) {
+    return res.status(503).json({ ok: false, error: 'solana-agent-kit is not configured' });
+  }
+
+  try {
+    const wallet = req.query.wallet ? new PublicKey(String(req.query.wallet)) : solanaAgent.wallet_address;
+    const balanceSol = await solanaAgent.getBalanceOther(wallet);
+
+    return res.json({
+      ok: true,
+      wallet: wallet.toBase58(),
+      balanceSol,
+    });
+  } catch (error) {
+    return res.status(400).json({ ok: false, error: error.message || 'failed to fetch balance' });
+  }
+});
 
 app.post('/register-device', async (req, res) => {
   const { deviceId, fcmToken, tensorApiKey } = req.body;
