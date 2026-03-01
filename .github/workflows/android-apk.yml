@@ -48,8 +48,13 @@ jobs:
       - name: Flutter analyze
         run: flutter analyze
 
-      - name: Flutter tests
-        run: flutter test
+      - name: Flutter tests (if present)
+        run: |
+          if find test -name '*_test.dart' -type f 2>/dev/null | grep -q .; then
+            flutter test
+          else
+            echo "No tests found, skipping flutter test"
+          fi
 
       - name: Build arm64 debug APK
         run: flutter build apk --debug --target-platform android-arm64
