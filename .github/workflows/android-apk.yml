@@ -1,11 +1,18 @@
-name: Build Android APK
+name: Ship Android APK
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ main ]
+
+concurrency:
+  group: ship-android-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build:
+  quality-and-build:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -22,7 +29,7 @@ jobs:
       - name: Regenerate Android scaffold
         run: flutter create --project-name tensor_alerts --platforms=android .
 
-      - name: Remove Firebase plugin for CI debug build
+      - name: Remove Firebase plugin for CI build
         run: sed -i '/com.google.gms.google-services/d' android/app/build.gradle || true
 
       - name: Force Java/Kotlin 17 alignment
@@ -35,11 +42,22 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
-      - name: Build arm64 APK
+      - name: Flutter analyze
+        run: flutter analyze
+
+      - name: Flutter tests
+        run: flutter test
+
+      - name: Build arm64 debug APK
         run: flutter build apk --debug --target-platform android-arm64
 
-      - name: Upload APK
+      - name: Build arm64 release APK
+        run: flutter build apk --release --target-platform android-arm64
+
+      - name: Upload APK artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: tensor-alerts-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          name: tensor-alerts-apks-${{ github.run_number }}
+          path: |
+            build/app/outputs/flutter-apk/app-debug.apk
+            build/app/outputs/flutter-apk/app-release.apk
