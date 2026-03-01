@@ -62,10 +62,49 @@ jobs:
       - name: Build arm64 release APK
         run: flutter build apk --release --target-platform android-arm64
 
-      - name: Upload APK artifacts
+      - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: tensor-alerts-apks-${{ github.run_number }}
-          path: |
-            build/app/outputs/flutter-apk/app-debug.apk
-            build/app/outputs/flutter-apk/app-release.apk
+          name: app-debug-apk-${{ github.run_number }}
+          path: build/app/outputs/flutter-apk/app-debug.apk
+
+      - name: Upload release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk-${{ github.run_number }}
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+  emulator-smoke-test:
+    needs: quality-and-build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download debug APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-debug-apk-${{ github.run_number }}
+          path: artifacts
+
+      - name: Run emulator smoke test
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          profile: pixel_6
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          disable-animations: true
+          script: |
+            adb install -r artifacts/app-debug.apk
+            adb shell am start -n ai.tensor.alerts/.MainActivity
+            sleep 12
+            adb shell pidof ai.tensor.alerts || (echo "App is not running after launch" && adb logcat -d > emulator-logcat.txt && exit 1)
+            adb logcat -d > emulator-logcat.txt
+
+      - name: Upload emulator logcat
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: emulator-logcat-${{ github.run_number }}
+          path: emulator-logcat.txt
