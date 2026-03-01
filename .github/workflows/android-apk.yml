@@ -19,6 +19,19 @@ jobs:
         with:
           flutter-version: "3.24.3"
 
+      - name: Regenerate Android scaffold
+        run: flutter create --project-name tensor_alerts --platforms=android .
+
+      - name: Remove Firebase plugin for CI debug build
+        run: sed -i '/com.google.gms.google-services/d' android/app/build.gradle || true
+
+      - name: Force Java/Kotlin 17 alignment
+        run: |
+          sed -i 's/sourceCompatibility JavaVersion.VERSION_1_8/sourceCompatibility JavaVersion.VERSION_17/g' android/app/build.gradle || true
+          sed -i 's/targetCompatibility JavaVersion.VERSION_1_8/targetCompatibility JavaVersion.VERSION_17/g' android/app/build.gradle || true
+          sed -i "s/jvmTarget = '1.8'/jvmTarget = '17'/g" android/app/build.gradle || true
+          sed -i 's/jvmTarget = "1.8"/jvmTarget = "17"/g' android/app/build.gradle || true
+
       - name: Flutter pub get
         run: flutter pub get
 
