@@ -102,12 +102,7 @@ jobs:
             echo "Launching app via monkey"
             adb shell monkey -p ai.tensor.alerts -c android.intent.category.LAUNCHER 1
             sleep 12
-            if ! adb shell pidof ai.tensor.alerts >/dev/null; then
-              echo "App is not running after launch"
-              adb shell dumpsys package ai.tensor.alerts | sed -n '1,220p'
-              adb logcat -d > emulator-logcat.txt
-              exit 1
-            fi
+            adb shell pidof ai.tensor.alerts >/dev/null || { echo "App is not running after launch"; adb shell dumpsys package ai.tensor.alerts | sed -n '1,220p'; adb logcat -d > emulator-logcat.txt; exit 1; }
             adb logcat -d > emulator-logcat.txt
 
       - name: Upload emulator logcat
