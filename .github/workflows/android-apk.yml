@@ -99,12 +99,11 @@ jobs:
           disable-animations: true
           script: |
             adb install -r artifacts/app-debug.apk
-            PKG=$(adb shell pm list packages | tr -d '\r' | grep -m1 -E 'package:(ai\.tensor\.alerts|com\.example\.tensor_alerts)' | sed 's/^package://')
-            [ -n "$PKG" ] || { echo "Could not detect installed package"; adb shell pm list packages | tr -d '\r' | grep -i tensor || true; adb logcat -d > emulator-logcat.txt; exit 1; }
-            echo "Launching app via monkey (package: $PKG)"
-            adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1
+            echo "Launching app via monkey (trying ai.tensor.alerts and com.example.tensor_alerts)"
+            adb shell monkey -p ai.tensor.alerts -c android.intent.category.LAUNCHER 1 || true
+            adb shell monkey -p com.example.tensor_alerts -c android.intent.category.LAUNCHER 1 || true
             sleep 12
-            adb shell pidof "$PKG" >/dev/null || { echo "App is not running after launch ($PKG)"; adb shell dumpsys package "$PKG" | sed -n '1,220p'; adb logcat -d > emulator-logcat.txt; exit 1; }
+            adb shell pidof ai.tensor.alerts >/dev/null || adb shell pidof com.example.tensor_alerts >/dev/null || { echo "App is not running after launch"; adb shell pm list packages | tr -d '\r' | grep -E 'ai\.tensor\.alerts|com\.example\.tensor_alerts|tensor' || true; adb shell dumpsys package ai.tensor.alerts | sed -n '1,180p' || true; adb shell dumpsys package com.example.tensor_alerts | sed -n '1,180p' || true; adb logcat -d > emulator-logcat.txt; exit 1; }
             adb logcat -d > emulator-logcat.txt
 
       - name: Upload emulator logcat
