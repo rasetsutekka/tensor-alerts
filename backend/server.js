@@ -23,6 +23,7 @@ const port = process.env.PORT || 8080;
 
 const solanaRpcUrl = process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com';
 const solanaPrivateKey = process.env.SOLANA_PRIVATE_KEY;
+const solanaMcpUrl = process.env.SOLANA_MCP_URL || 'https://mcp.solana.com/mcp';
 const solanaAgent = solanaPrivateKey ? new SolanaAgentKit(solanaPrivateKey, solanaRpcUrl) : null;
 
 // Lightweight in-memory cooldown/rate limiter for proactive floor alerts.
@@ -62,6 +63,28 @@ app.get('/solana/balance', async (req, res) => {
     });
   } catch (error) {
     return res.status(400).json({ ok: false, error: error.message || 'failed to fetch balance' });
+  }
+});
+
+app.get('/solana/mcp/status', async (_, res) => {
+  try {
+    const response = await fetch(solanaMcpUrl, {
+      method: 'HEAD',
+      redirect: 'follow',
+    });
+
+    return res.json({
+      ok: response.ok,
+      mcpUrl: solanaMcpUrl,
+      status: response.status,
+      statusText: response.statusText,
+    });
+  } catch (error) {
+    return res.status(502).json({
+      ok: false,
+      mcpUrl: solanaMcpUrl,
+      error: error.message || 'failed to reach Solana MCP endpoint',
+    });
   }
 });
 
