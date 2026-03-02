@@ -99,12 +99,8 @@ jobs:
           disable-animations: true
           script: |
             adb install -r artifacts/app-debug.apk
-            PKG=$(aapt dump badging artifacts/app-debug.apk | awk -F"'" '/package: name=/{print $2; exit}')
-            if [ -z "$PKG" ]; then
-              echo "Could not detect package name from APK"
-              adb logcat -d > emulator-logcat.txt
-              exit 1
-            fi
+            PKG=$(adb shell pm list packages | tr -d '\r' | grep -m1 -E 'package:(ai\.tensor\.alerts|com\.example\.tensor_alerts)' | sed 's/^package://')
+            [ -n "$PKG" ] || { echo "Could not detect installed package"; adb shell pm list packages | tr -d '\r' | grep -i tensor || true; adb logcat -d > emulator-logcat.txt; exit 1; }
             echo "Launching app via monkey (package: $PKG)"
             adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1
             sleep 12
