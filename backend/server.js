@@ -106,6 +106,30 @@ app.post('/upsert-collection', async (req, res) => {
   res.json({ ok: true });
 });
 
+app.post('/test-push-topic', async (req, res) => {
+  const topic = String(req.body?.topic || 'tensor_alerts_test');
+  const title = String(req.body?.title || 'Tensor Alerts Test');
+  const body = String(req.body?.body || 'Push pipeline is working');
+
+  try {
+    const id = await admin.messaging().send({
+      topic,
+      notification: { title, body },
+      android: {
+        priority: 'high',
+        notification: {
+          channelId: 'tensor-alerts',
+          clickAction: 'FLUTTER_NOTIFICATION_CLICK',
+        },
+      },
+      data: { deeplink: 'https://tensor.trade' },
+    });
+    res.json({ ok: true, messageId: id, topic });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message || 'failed to send topic push' });
+  }
+});
+
 function passesCadence(deviceId, c, event) {
   const key = `${deviceId}:${c.slug}`;
   const now = Date.now();
