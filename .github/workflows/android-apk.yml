@@ -29,6 +29,23 @@ jobs:
       - name: Regenerate Android scaffold
         run: flutter create --project-name tensor_alerts --platforms=android .
 
+      - name: Force Android package/activity namespace to ai.tensor.alerts
+        run: |
+          sed -i 's/applicationId "com.example.tensor_alerts"/applicationId "ai.tensor.alerts"/g' android/app/build.gradle || true
+          sed -i 's/namespace = "com.example.tensor_alerts"/namespace = "ai.tensor.alerts"/g' android/app/build.gradle || true
+          SRC_KT=$(find android/app/src/main -type f -name MainActivity.kt | head -n 1)
+          if [ -n "$SRC_KT" ]; then
+            mkdir -p android/app/src/main/kotlin/ai/tensor/alerts
+            sed 's/^package .*/package ai.tensor.alerts/' "$SRC_KT" > android/app/src/main/kotlin/ai/tensor/alerts/MainActivity.kt
+            rm -f "$SRC_KT"
+          fi
+          SRC_JAVA=$(find android/app/src/main -type f -name MainActivity.java | head -n 1)
+          if [ -n "$SRC_JAVA" ]; then
+            mkdir -p android/app/src/main/java/ai/tensor/alerts
+            sed 's/^package .*/package ai.tensor.alerts;/' "$SRC_JAVA" > android/app/src/main/java/ai/tensor/alerts/MainActivity.java
+            rm -f "$SRC_JAVA"
+          fi
+
       - name: Remove Firebase plugin for CI build
         run: sed -i '/com.google.gms.google-services/d' android/app/build.gradle || true
 
