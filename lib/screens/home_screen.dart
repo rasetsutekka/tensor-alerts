@@ -35,7 +35,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final id = await DeviceIdentityService.getOrCreateId();
     final token = NotificationService.instance.fcmToken;
     if (token != null) {
-      await _backend.registerDevice(deviceId: id, fcmToken: token, tensorApiKey: _apiKey.isEmpty ? null : _apiKey);
+      try {
+        await _backend.registerDevice(deviceId: id, fcmToken: token, tensorApiKey: _apiKey.isEmpty ? null : _apiKey);
+      } catch (_) {
+        // Keep app usable even if backend is temporarily unreachable.
+      }
     }
     if (mounted) setState(() => _deviceId = id);
   }
